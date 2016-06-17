@@ -1,18 +1,9 @@
 #include "Level1Scene.h"
-#include "cocos2d.h"
 #include "Photon.h"
 #include <cmath>
 #include <vector>
 
-#define PI 3.14159265
-#define RED Color3B(248, 68, 98)
-#define GREEN Color3B(168, 255, 100)
-#define BLUE Color3B(40, 180, 255)
-#define DARK Color3B(50, 50, 50)
-
 USING_NS_CC;
-
-std::vector<Photon*> photons; //A vector of pointers to Photon
 
 bool rotateTag[4] = { false }; //Tag whether rotate the mirror or lense when cursor moved
 bool recieverTag[3] = { false }; //Tag whether the red green blue photons has reached the reciever
@@ -49,17 +40,17 @@ bool Level1::init() {
 	this->addChild(lense, 0, "lense");
 
 	//Mirror1
-	Sprite* mirror1 = Sprite::create("mirror_r.png");
+	Lense* mirror1 = (Lense*)Lense::create("mirror_r.png");
 	mirror1->setPosition(Vec2(450.0, 90.0));
 	this->addChild(mirror1, 0, "mirror1");
 
 	//Mirror2
-	Sprite* mirror2 = Sprite::create("mirror_r.png");
+	Lense* mirror2 = (Lense*)Lense::create("mirror_r.png");
 	mirror2->setPosition(Vec2(600.0, 165.0));
 	this->addChild(mirror2, 0, "mirror2");
 
 	//Mirror3
-	Sprite* mirror3 = Sprite::create("mirror_r.png");
+	Lense* mirror3 = (Lense*)Lense::create("mirror_r.png");
 	mirror3->setPosition(Vec2(700.0, 280.0));
 	this->addChild(mirror3, 0, "mirror3");
 
@@ -77,7 +68,7 @@ bool Level1::init() {
 	endButton->setScale(0.3, 0.3);
 	this->addChild(endButton, 0, "endButton");
 
-	this->schedule(schedule_selector(Level1::update), 1.0 / 1000);
+	this->schedule(schedule_selector(Level1::update), 1.0 / 5000);
 	this->schedule(schedule_selector(Level1::shoot), 1.0 / 3);
 
 	return true;
@@ -87,17 +78,17 @@ void Level1::update(float dt) {
 	static Size visibleSize = Director::getInstance()->getVisibleSize();
 	static Vec2 origin = Director::getInstance()->getVisibleOrigin();
 
-	static auto lense = this->getChildByName("lense");
+	static auto lense = (Sprite*)this->getChildByName("lense");
 	double k0 = tan((360 - lense->getRotation())*PI / 180.0);
 	static auto mirror1 = (Lense*)this->getChildByName("mirror1");
 	double k1 = tan((360 - mirror1->getRotation())*PI / 180.0);
-	static auto mirror2 = this->getChildByName("mirror2");
+	static auto mirror2 = (Lense*)this->getChildByName("mirror2");
 	double k2 = tan((360 - mirror2->getRotation())*PI / 180.0);
-	static auto mirror3 = this->getChildByName("mirror3");
+	static auto mirror3 = (Lense*)this->getChildByName("mirror3");
 	double k3 = tan((360 - mirror3->getRotation())*PI / 180.0);
-	static auto reciever = this->getChildByName("reciever");
+	static auto reciever = (Sprite*)this->getChildByName("reciever");
 
-	for (std::vector<Photon*>::iterator iter = photons.begin(); iter != photons.end(); iter++) {
+	for (std::vector<Photon*>::iterator iter = Photon::photons.begin(); iter != Photon::photons.end(); iter++) {
 		Photon* photon = *iter;
 		Vec2 V = photon->getVelocity();
 		Vec2 P = photon->getPosition();
@@ -105,7 +96,7 @@ void Level1::update(float dt) {
 		//If outside the screen, remove the photon
 		if (P.x <= 0.0 || P.x >= visibleSize.width || P.y <= 0.0 || P.y >= visibleSize.height) {
 			photon->removeFromParent();
-			photons.erase(iter);
+			Photon::photons.erase(iter);
 			continue;
 		}
 
@@ -117,9 +108,9 @@ void Level1::update(float dt) {
 				Vec2 newV = V.rotateByAngle(Vec2(0.0, 0.0), -PI / 6.0);
 				photon->setVelocity(newV);
 				Photon* newPhoton1 = Photon::create();
-				iter = photons.insert(iter, newPhoton1);
+				iter = Photon::photons.insert(iter, newPhoton1);
 				Photon* newPhoton2 = Photon::create();
-				iter = photons.insert(iter, newPhoton2);
+				iter = Photon::photons.insert(iter, newPhoton2);
 				//Make sure that this photon go through this lense(really important when photons need go through lenses)
 				while ((abs(P.x - lense->getPosition().x) <= lense->getContentSize().width * 0.5 * (1.0 / sqrt(1 + k0*k0))
 					&& abs(P.y - k0*(P.x - lense->getPosition().x) - lense->getPosition().y) <= 1.0))
@@ -139,25 +130,27 @@ void Level1::update(float dt) {
 			}
 		}
 
-		//Meet mirror1
-		P = photon->getPosition();
-		if (abs(P.x - mirror1->getPosition().x) <= mirror1->getContentSize().width * 0.5 * (1.0 / sqrt(1 + k1*k1))) {
-			if (abs(P.y - k1*(P.x - mirror1->getPosition().x) - mirror1->getPosition().y) <= 1.0) {
-				photon->setVelocity(V = 2.0 * V.project(Vec2(1.0, k1)) - V);
+		////Meet mirror1
+		if (photon->meetLense(mirror1)) {
+			photon->setVelocity(V = 2.0 * V.project(Vec2(1.0, k1)) - V);
+			while (photon->meetLense(mirror1)) {
+				photon->setPosition(photon->getPosition() + V);
 			}
 		}
 
 		//Meet mirror2
-		if (abs(P.x - mirror2->getPosition().x) <= mirror2->getContentSize().width * 0.5 * (1.0 / sqrt(1 + k2*k2))) {
-			if (abs(P.y - k2*(P.x - mirror2->getPosition().x) - mirror2->getPosition().y) <= 3.0) {
-				photon->setVelocity(V = 2.0 * V.project(Vec2(1.0, k2)) - V);
+		if (photon->meetLense(mirror2)) {
+			photon->setVelocity(V = 2.0 * V.project(Vec2(1.0, k2)) - V);
+			while (photon->meetLense(mirror2)) {
+				photon->setPosition(photon->getPosition() + V);
 			}
 		}
 
 		//Meet mirror3
-		if (abs(P.x - mirror3->getPosition().x) <= mirror3->getContentSize().width * 0.5 * (1.0 / sqrt(1 + k3*k3))) {
-			if (abs(P.y - k3*(P.x - mirror3->getPosition().x) - mirror3->getPosition().y) <= 3.0) {
-				photon->setVelocity(V = 2.0 * V.project(Vec2(1.0, k3)) - V);
+		if (photon->meetLense(mirror3)) {
+			photon->setVelocity(V = 2.0 * V.project(Vec2(1.0, k3)) - V);
+			while (photon->meetLense(mirror3)) {
+				photon->setPosition(photon->getPosition() + V);
 			}
 		}
 
@@ -168,7 +161,7 @@ void Level1::update(float dt) {
 	recieverTag[0] = false;
 	recieverTag[1] = false;
 	recieverTag[2] = false;
-	for (std::vector<Photon*>::iterator iter = photons.begin(); iter != photons.end(); iter++) {
+	for (std::vector<Photon*>::iterator iter = Photon::photons.begin(); iter != Photon::photons.end(); iter++) {
 		Photon* photon = *iter;
 		Vec2 P = photon->getPosition();
 		Color3B currentColor = photon->getColor();
@@ -189,13 +182,13 @@ void Level1::update(float dt) {
 		reciever->setColor(Color3B(255, 255, 255));
 	}
 	else if (recieverTag[0] && recieverTag[1]) {
-		reciever->setColor(Color3B(255, 255, 0));
+		reciever->setColor(RED_GREEN);
 	}
 	else if (recieverTag[0] && recieverTag[2]) {
-		reciever->setColor(Color3B(255, 0, 255));
+		reciever->setColor(RED_BLUE);
 	}
 	else if (recieverTag[1] && recieverTag[2]) {
-		reciever->setColor(Color3B(0, 255, 255));
+		reciever->setColor(GREEN_BLUE);
 	}
 	else if (recieverTag[0]) {
 		reciever->setColor(RED);
@@ -216,9 +209,9 @@ void Level1::update(float dt) {
 void Level1::shoot(float dt) {
 	Photon* newPhoton = Photon::create();
 	newPhoton->setPosition(Vec2(420.0, 560.0));
-	newPhoton->setVelocity(Vec2(0.1, -0.2));
+	newPhoton->setVelocity(Vec2(0.1/5, -0.2/5));
 	this->addChild(newPhoton);
-	photons.push_back(newPhoton);
+	Photon::photons.push_back(newPhoton);
 
 	return;
 }
