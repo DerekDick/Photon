@@ -6,7 +6,7 @@
 USING_NS_CC;
 
 bool rotateTag[4] = { false }; //Tag whether rotate the mirror or lense when cursor moved
-bool recieverTag[3] = { false }; //Tag whether the red green blue photons has reached the reciever
+bool receiverTag[3] = { false }; //Tag whether the red green blue photons has reached the receiver
 
 Scene* Level1::createScene() {
 	Scene* scene = Scene::create();
@@ -54,11 +54,11 @@ bool Level1::init() {
 	mirror3->setPosition(Vec2(700.0, 280.0));
 	this->addChild(mirror3, 0, "mirror3");
 
-	//Reciever
-	Sprite* reciever = Sprite::create("reciever.png");
-	reciever->setPosition(Vec2(150.0, 300.0));
-	reciever->setColor(Color3B(100, 100, 100));
-	this->addChild(reciever, 0, "reciever");
+	//receiver
+	Sprite* receiver = Sprite::create("receiver.png");
+	receiver->setPosition(Vec2(150.0, 300.0));
+	receiver->setColor(Color3B(100, 100, 100));
+	this->addChild(receiver, 0, "receiver");
 
 	//End Button
 	Sprite* endButton = Sprite::create("end_button_normal.png");
@@ -86,7 +86,7 @@ void Level1::update(float dt) {
 	double k2 = tan((360 - mirror2->getRotation())*PI / 180.0);
 	static auto mirror3 = (Lense*)this->getChildByName("mirror3");
 	double k3 = tan((360 - mirror3->getRotation())*PI / 180.0);
-	static auto reciever = (Sprite*)this->getChildByName("reciever");
+	static auto receiver = (Sprite*)this->getChildByName("receiver");
 
 	for (std::vector<Photon*>::iterator iter = Photon::photons.begin(); iter != Photon::photons.end(); iter++) {
 		Photon* photon = *iter;
@@ -157,50 +157,50 @@ void Level1::update(float dt) {
 		photon->setPosition(photon->getPosition() + V);
 	}
 
-	//Meet the reciever
-	recieverTag[0] = false;
-	recieverTag[1] = false;
-	recieverTag[2] = false;
+	//Meet the receiver
+	receiverTag[0] = false;
+	receiverTag[1] = false;
+	receiverTag[2] = false;
 	for (std::vector<Photon*>::iterator iter = Photon::photons.begin(); iter != Photon::photons.end(); iter++) {
 		Photon* photon = *iter;
 		Vec2 P = photon->getPosition();
 		Color3B currentColor = photon->getColor();
-		if (P.distance(reciever->getPosition()) <= reciever->getContentSize().width / 2.0) {
+		if (P.distance(receiver->getPosition()) <= receiver->getContentSize().width / 2.0) {
 			if (currentColor == RED) {
-				recieverTag[0] = true;
+				receiverTag[0] = true;
 			}
 			else if (currentColor == GREEN) {
-				recieverTag[1] = true;
+				receiverTag[1] = true;
 			}
 			else if (currentColor == BLUE) {
-				recieverTag[2] = true;
+				receiverTag[2] = true;
 			}
 		}
 	}
-	//Change the color of the reciever
-	if (recieverTag[0] && recieverTag[1] && recieverTag[2]) {
-		reciever->setColor(Color3B(255, 255, 255));
+	//Change the color of the receiver
+	if (receiverTag[0] && receiverTag[1] && receiverTag[2]) {
+		receiver->setColor(Color3B(255, 255, 255));
 	}
-	else if (recieverTag[0] && recieverTag[1]) {
-		reciever->setColor(RED_GREEN);
+	else if (receiverTag[0] && receiverTag[1]) {
+		receiver->setColor(RED_GREEN);
 	}
-	else if (recieverTag[0] && recieverTag[2]) {
-		reciever->setColor(RED_BLUE);
+	else if (receiverTag[0] && receiverTag[2]) {
+		receiver->setColor(RED_BLUE);
 	}
-	else if (recieverTag[1] && recieverTag[2]) {
-		reciever->setColor(GREEN_BLUE);
+	else if (receiverTag[1] && receiverTag[2]) {
+		receiver->setColor(GREEN_BLUE);
 	}
-	else if (recieverTag[0]) {
-		reciever->setColor(RED);
+	else if (receiverTag[0]) {
+		receiver->setColor(RED);
 	}
-	else if (recieverTag[1]) {
-		reciever->setColor(GREEN);
+	else if (receiverTag[1]) {
+		receiver->setColor(GREEN);
 	}
-	else if (recieverTag[2]) {
-		reciever->setColor(BLUE);
+	else if (receiverTag[2]) {
+		receiver->setColor(BLUE);
 	}
 	else {
-		reciever->setColor(DARK);
+		receiver->setColor(DARK);
 	}
 
 	return;
