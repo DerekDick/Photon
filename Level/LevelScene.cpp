@@ -4,17 +4,9 @@
 #include "Level2Scene.h"
 #include "Level3Scene.h"
 #include "Level4Scene.h"
-#include "Level5Scene.h"
-#include "Level6Scene.h"
-#include "Level7Scene.h"
-#include "Level8Scene.h"
-#include "Level9Scene.h"
-#include "Level10Scene.h"
-#include "Level11Scene.h"
-#include "Level12Scene.h"
-#include "Level13Scene.h"
-#include "Level14Scene.h"
-#include "Level15Scene.h"
+#include "Lense.h"
+#include "Mirror.h"
+#include "PhotonGame.h"
 
 USING_NS_CC;
 USING_NS_CC_DEN;
@@ -42,44 +34,7 @@ Scene *Level::createLevel(int levelNum) {
 	case 4:
 	scene = Level4::createScene();
 	break;
-	case 5:
-	scene = Level5::createScene();
-	break;
-	case 6:
-	scene = Level6::createScene();
-	break;
-	case 7:
-	scene = Level7::createScene();
-	break;
-	case 8:
-	scene = Level8::createScene();
-	break;
-	case 9:
-	scene = Level9::createScene();
-	break;
-	case 10:
-	scene = Level10::createScene();
-	break;
-	case 11:
-	scene = Level11::createScene();
-	break;
-	case 12:
-	scene = Level12::createScene();
-	break;
-	case 13:
-	scene = Level13::createScene();
-	break;
-	case 14:
-	scene = Level14::createScene();
-	break;
-	case 15:
-	scene = Level15::createScene();
-	break;
-	default:
-	scene = Level::createScene();
-	break;
 	}
-	//scene = Level1::createScene();
 	return scene;
 }
 
@@ -92,7 +47,7 @@ bool Level::init() {
 
 	auto rootNode = CSLoader::createNode("Csbs/Level.csb");
 	rootNode->setPosition(Vec2::ZERO);
-	this->addChild(rootNode);
+	this->addChild(rootNode, 0, "rootChild");
 
 	//Pause button
 	pauseButton = dynamic_cast<ui::Button *>(rootNode->getChildByName("PauseButton"));
@@ -109,39 +64,35 @@ bool Level::init() {
 	pauseButton->addTouchEventListener(pauseButtonListener);
 
 	//Next level button
-	nextLevelButton = dynamic_cast<ui::Button *>(rootNode->getChildByName("NextLevelButton"));
+	nextLevelButton = dynamic_cast<ui::Button*>(rootNode->getChildByName("NextLevelButton"));
 
 	//Usage of intNextLevelButton
 	this->initNextLevelButton();
 
-	//When level passed
-	this->nextLevelButtonOnUse(true);
-
 	return true;
 }
 
-Label * Level::addLevelTitle() {
+Label* Level::addLevelTitle() {
 	auto text = __String::createWithFormat("Aphoton W level%dB", levelNumber);
 	Label* title = Label::createWithTTF(levelTTFConfig, text->_string);
 	title->setAnchorPoint(Vec2(0.5, 1.0));
 	title->setPosition(Vec2(visibleSize.width / 2, visibleSize.height));
 	title->setTextColor(Color4B(255, 255, 255, 200));
-	this->addChild(title);
+	this->addChild(title, 1, "title");
 
 	return title;
 }
 
-Sprite* Level::addLense(std::string fileName, Vec2 pos, double angle) {
-	Sprite* newLense = Sprite::create(fileName);
-	newLense->setPosition(pos);
-	newLense->setRotation(angle);
-	this->addChild(newLense);
-
-	return newLense;
+Sprite* Level::addLightSource(cocos2d::Vec2 pos, cocos2d::Color3B color) {
+	Sprite* lightSource = Sprite::create(FILE_LIGHT_SOURCE);
+	lightSource->setPosition(pos);
+	lightSource->setColor(color);
+	this->addChild(lightSource);
+	return lightSource;
 }
 
-cocos2d::Sprite * Level::addReceiver(std::string fileName, cocos2d::Vec2 pos, cocos2d::Color3B color) {
-	Sprite* newReceiver = Sprite::create(fileName);
+cocos2d::Sprite* Level::addReceiver(cocos2d::Vec2 pos, cocos2d::Color3B color) {
+	Sprite* newReceiver = Sprite::create(FILE_RECEIVER);
 	newReceiver->setPosition(pos);
 	newReceiver->setColor(DARK);
 	this->addChild(newReceiver);
@@ -153,9 +104,14 @@ void Level::initNextLevelButton() {
 	auto nextLevelButtonListener = [this](Ref* pSender, ui::Widget::TouchEventType type) {
 		if (type == ui::Widget::TouchEventType::ENDED) {
 			int levelNum = this->getLevelNumber();
-			auto scene = Level::createLevel(levelNum + 1);
-			auto reScr = TransitionMoveInL::create(0.8f, scene);
-			Director::getInstance()->replaceScene(reScr);
+			if (levelNum != 4) {
+				auto scene = Level::createLevel(levelNum + 1);
+				auto reScr = TransitionMoveInL::create(0.8f, scene);
+				Director::getInstance()->replaceScene(reScr);
+			}
+			else {
+				Director::getInstance()->popToRootScene();
+			}
 			if (UserDefault::getInstance()->getBoolForKey(SOUND_KEY)) {
 				SimpleAudioEngine::getInstance()->playEffect(FILE_SOUND_1);
 			}
@@ -175,4 +131,68 @@ void Level::onEnterTransitionDidFinish() {
 	if (UserDefault::getInstance()->getBoolForKey(MUSIC_KEY)) {
 		SimpleAudioEngine::getInstance()->resumeBackgroundMusic();
 	}
+}
+
+void Level::onEnter() {
+	Layer::onEnter();
+	auto myTouchListener = EventListenerTouchOneByOne::create();
+	myTouchListener->setSwallowTouches(false);
+	myTouchListener->onTouchBegan = CC_CALLBACK_2(Level::touchBegan, this);
+	myTouchListener->onTouchMoved = CC_CALLBACK_2(Level::touchMoved, this);
+
+	EventDispatcher* eventDispatcher = Director::getInstance()->getEventDispatcher();
+	eventDispatcher->addEventListenerWithSceneGraphPriority(myTouchListener, this->getChildByName("rootChild"));
+
+	return;
+}
+bool Level::touchBegan(Touch* touch, Event* event) {
+	Vec2 touchPosition = touch->getLocation();
+	// move event should be responded first
+	for (std::vector<Sprite*>::iterator iter = movableLenses.begin(); iter != movableLenses.end(); iter++) {
+		Sprite* lense = *iter;
+		if (touchPosition.distance(lense->getPosition()) <= lense->getContentSize().height / 2.0) {
+			movingLense = lense;
+			return true;
+		}
+	}
+	// if no lense is movable, respond to the rotate event
+	for (std::vector<Sprite*>::iterator iter = rotatableLenses.begin(); iter != rotatableLenses.end(); iter++) {
+		Sprite* lense = *iter;
+		Vec2 localPosition = lense->convertToNodeSpaceAR(touchPosition);
+		if ( (abs(localPosition.x) <= lense->getContentSize().width / 2.0) && (abs(localPosition.y) <= lense->getContentSize().height / 2.0)/*touchPosition.distance(lense->getPosition()) <= lense->getContentSize().width / 2.0*/) {
+			rotatingLense = lense;
+			return true;
+		}
+	}
+
+	movingLense = nullptr;
+	rotatingLense = nullptr;
+
+	return false;
+}
+
+void Level::touchMoved(cocos2d::Touch * touch, cocos2d::Event* event) {
+	Vec2 touchPosition = touch->getLocation();
+	if (movingLense) {
+		movingLense->setPosition(touchPosition);
+		return;
+	}
+	else if (rotatingLense) {
+		Vec2 lensePosition = rotatingLense->getPosition();
+		double angle = 0.0;
+		if (touchPosition.x != lensePosition.x) {
+			angle = atan((touchPosition.y - lensePosition.y) / (touchPosition.x - lensePosition.x)) * 180 / PI;
+		}
+		else {
+			angle = 90;
+		}
+		rotatingLense->setRotation(360 - angle);
+		return;
+	}
+}
+
+void Level::onExit() {
+	Layer::onExit();
+	Director::getInstance()->getEventDispatcher()->removeEventListenersForTarget(this->getChildByName("rootChild"));
+	return;
 }
