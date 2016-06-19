@@ -21,6 +21,9 @@
 #define RED_GREEN cocos2d::Color3B(255, 255, 0)
 #define RED_BLUE cocos2d::Color3B(255, 0, 255)
 #define GREEN_BLUE cocos2d::Color3B(0, 255, 255)
+#define DARK_GREEN cocos2d::Color3B(16, 72, 8)
+#define DARK_RED cocos2d::Color3B(110, 0, 6)
+#define DARK_BLUE cocos2d::Color3B(0, 60, 108)
 #define WINDOW_SIZE 960, 640
 #define WINDOW_CENTER cocos2d::Vec2(480, 320)
 #define MUSIC_KEY "music_key"
@@ -34,5 +37,10 @@
 #define FILE_LENSE "Pics/object/lense.png"
 #define FILE_MIRROR "Pics/object/mirror.png"
 #define FILE_MIRROR_R "Pics/object/mirror_r.png"
+#define FILE_LENSE_THROUGH "Pics/object/lense_through.png"
+#define FILE_LENSE_TURN "Pics/object/lense_turn.png"
+#define FILE_LENSE_TURN_R "Pics/object/lense_turn_r.png"
+#define FILE_LIGHT_SOURCE "Pics/object/light_source.png"
+#define FILE_BLACKHOLE "Pics/object/blackhole.png"
 
 #endif // _PHOTONGAME_H_
