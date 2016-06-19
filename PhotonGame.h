@@ -30,5 +30,9 @@
 //file path
 #define FILE_BGM "Sound/Bgm_MoscowOutskirtsNight.mp3"
 #define FILE_SOUND_1 "Sound/Click.wav"
+#define FILE_RECEIVER "Pics/object/receiver.png"
+#define FILE_LENSE "Pics/object/lense.png"
+#define FILE_MIRROR "Pics/object/mirror.png"
+#define FILE_MIRROR_R "Pics/object/mirror_r.png"
 
 #endif // _PHOTONGAME_H_
